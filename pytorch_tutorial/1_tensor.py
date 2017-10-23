@@ -11,7 +11,7 @@ dtype = torch.FloatTensor
 N, D_in, H, D_out = 64, 1000, 100, 10
 
 # Create random input and output data
-x = torch.randn(N, D_in).type(dtype)
+x = torch.randn(N, D_in) # .type(dtype)
 y = torch.randn(N, D_out).type(dtype)
 
 # Randomly initialize weights
