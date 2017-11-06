@@ -1,0 +1,7 @@
+# Scalable Inference in Latent Variable Models
+ Yahoo-LDA (Alex Smola)
+ WSDM'12
+
+# Slow Learners are Fast
+ NIPS'09
+  online SGD -> stale batch 

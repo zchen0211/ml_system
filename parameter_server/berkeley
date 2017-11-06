@@ -1,0 +1,9 @@
+# Mlbase
+ # Mlbase: A distributed machine-learning system.
+  Berkeley
+
+# Async
+ Hogwild!: A lock-free approach to parallelizing stochastic gradient descent
+  NIPS 2011
+  Feng Niu, Benjamin Recht, Christopher R´e and Stephen J. Wright
+  University of Wisconsin-Madison
