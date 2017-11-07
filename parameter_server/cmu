@@ -23,7 +23,10 @@ PS              vector/matrix  various      continuous
   # Petuum: A New Platform for Distributed Machine Learning on Big Data
    KDD 2015
 
-# PS
+# Mu Li, Smola
+ # Parameter server for distributed machine learning
+  NIPS 2013
+
  # Scaling Distributed Machine Learning with the Parameter Server
   OSDI 2014
   Mu Li, Alex Smola
@@ -48,6 +51,18 @@ PS              vector/matrix  various      continuous
  Exp:
   Sparse Logistic Regression
   LDA
+
+ # Communication efficient distributed machine learning with the parameter server
+  NIPS 2014
+  Mu Li, David Andersen, Alex Smola, Kai Yu
+  Flexible Consistency Models via Task Dependency Graphs:
+   Sequential, Eventual, 1 Bounded Delay
+  Flexible Consistency via User-Defined Filters:
+   Significantly modified filter
+   Random skip filter
+   KKT filter
+   Key Caching filter
+   Compressing filter
 
 # Distributed Graphlab: A framework for machine learning and data mining in the cloud.
  GraphLab
