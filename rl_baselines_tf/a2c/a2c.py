@@ -106,6 +106,9 @@ class Runner(object):
         self.states = model.initial_state # [] for CNN, sth for LSTM
         self.dones = [False for _ in range(nenv)]
 
+        self.episode_rewards = np.zeros((nenv, 1))
+        self.final_rewards = np.zeros((nenv, 1))
+
     def update_obs(self, obs):
         # Do frame-stacking here instead of the FrameStack wrapper to reduce
         # IPC overhead
@@ -128,6 +131,14 @@ class Runner(object):
             mb_values.append(values)
             mb_dones.append(self.dones)
             obs, rewards, dones, _ = self.env.step(actions)
+            # for performance monitoring purpose
+            rewards_ = rewards.reshape((-1, 1))
+            self.episode_rewards += rewards_
+            masks = np.array([[0.0] if dones else [1.0] for dones in dones]) # (16, 1)
+            self.final_rewards *= masks
+            self.final_rewards += (1 - masks) * self.episode_rewards
+            self.episode_rewards *= masks
+
             self.states = states
             self.dones = dones
             for n, done in enumerate(dones):
@@ -135,6 +146,7 @@ class Runner(object):
                     self.obs[n] = self.obs[n]*0
             self.update_obs(obs)
             mb_rewards.append(rewards)
+
         mb_dones.append(self.dones)
         #batch of steps to batch of rollouts, align the data with timestep 1st then batch
         mb_obs = np.asarray(mb_obs, dtype=np.uint8).swapaxes(1, 0).reshape(self.batch_ob_shape) # (80, 84, 84, 4)
@@ -187,6 +199,11 @@ def learn(policy, env, seed, nsteps=5, nstack=4, total_timesteps=int(80e6), vf_c
             logger.record_tabular("policy_entropy", float(policy_entropy))
             logger.record_tabular("value_loss", float(value_loss))
             logger.record_tabular("explained_variance", float(ev))
+
+            logger.record_tabular("reward mean:", runner.final_rewards.mean())
+            logger.record_tabular("reward median:", np.median(runner.final_rewards))
+            logger.record_tabular("reward min:", runner.final_rewards.min())
+            logger.record_tabular("reward max:", runner.final_rewards.max())
             logger.dump_tabular()
     env.close()
 
