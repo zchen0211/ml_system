@@ -45,7 +45,7 @@ class LnLstmPolicy(object):
 
 class LstmPolicy(object):
 
-    def __init__(self, sess, ob_space, ac_space, nenv, nsteps, nstack, nlstm=256, reuse=False):
+    def __init__(self, sess, ob_space, ac_space, nenv, nsteps, nstack, nlstm=256, reuse=False, skip=True):
         nbatch = nenv*nsteps
         nh, nw, nc = ob_space.shape
         ob_shape = (nbatch, nh, nw, nc*nstack)
@@ -63,8 +63,12 @@ class LstmPolicy(object):
             ms = batch_to_seq(M, nenv, nsteps)
             h5, snew = lstm(xs, ms, S, 'lstm1', nh=nlstm)
             h5 = seq_to_batch(h5)
-            pi = fc(h5, 'pi', nact, act=lambda x:x)
-            vf = fc(h5, 'v', 1, act=lambda x:x)
+            if not skip:
+                pi = fc(h5, 'pi', nact, act=lambda x:x)
+                vf = fc(h5, 'v', 1, act=lambda x:x)
+            else:
+                pi = fc(h5, 'pi', nact, act=lambda x:x) + fc(h4, 'pi_skip', nact, act=lambda x:x)
+                vf = fc(h5, 'v', 1, act=lambda x:x) + fc(h4, 'v_skip', 1, act=lambda x:x)
 
         v0 = vf[:, 0]
         a0 = sample(pi)
