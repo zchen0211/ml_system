@@ -21,19 +21,29 @@ class CnnPolicy(object):
         obscaled = ob / 255.0
 
         with tf.variable_scope("pol"):
-            x = obscaled
+            x = obscaled # (84, 84, 1)
+            # (?, 20, 20, 8)
             x = tf.nn.relu(U.conv2d(x, 8, "l1", [8, 8], [4, 4], pad="VALID"))
+            # (?, 9, 9, 16)
             x = tf.nn.relu(U.conv2d(x, 16, "l2", [4, 4], [2, 2], pad="VALID"))
+            # (?, 1296)
             x = U.flattenallbut0(x)
+            # (?, 128)
             x = tf.nn.relu(tf.layers.dense(x, 128, name='lin', kernel_initializer=U.normc_initializer(1.0)))
+            # (?, 4)
             logits = tf.layers.dense(x, pdtype.param_shape()[0], name='logits', kernel_initializer=U.normc_initializer(0.01))
             self.pd = pdtype.pdfromflat(logits)
         with tf.variable_scope("vf"):
-            x = obscaled
+            x = obscaled # (84, 84, 1)
+            # (?, 20, 20, 8)
             x = tf.nn.relu(U.conv2d(x, 8, "l1", [8, 8], [4, 4], pad="VALID"))
+            # (?, 9, 9, 16)
             x = tf.nn.relu(U.conv2d(x, 16, "l2", [4, 4], [2, 2], pad="VALID"))
+            # (?, 1296)
             x = U.flattenallbut0(x)
+            # (?, 128)
             x = tf.nn.relu(tf.layers.dense(x, 128, name='lin', kernel_initializer=U.normc_initializer(1.0)))
+            # (?, 1)
             self.vpred = tf.layers.dense(x, 1, name='value', kernel_initializer=U.normc_initializer(1.0))
             self.vpredz = self.vpred
 

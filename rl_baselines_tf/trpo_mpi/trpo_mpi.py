@@ -24,16 +24,16 @@ def traj_segment_generator(pi, env, horizon, stochastic):
     ep_lens = []
 
     # Initialize history arrays
-    obs = np.array([ob for _ in range(horizon)])
-    rews = np.zeros(horizon, 'float32')
-    vpreds = np.zeros(horizon, 'float32')
-    news = np.zeros(horizon, 'int32')
-    acs = np.array([ac for _ in range(horizon)])
-    prevacs = acs.copy()
+    obs = np.array([ob for _ in range(horizon)]) # (512, 84, 84, 1)
+    rews = np.zeros(horizon, 'float32') # (512, )
+    vpreds = np.zeros(horizon, 'float32') # (512, )
+    news = np.zeros(horizon, 'int32') # (512, )
+    acs = np.array([ac for _ in range(horizon)]) # (512, )
+    prevacs = acs.copy() # (512, )
 
     while True:
         prevac = ac
-        ac, vpred = pi.act(stochastic, ob)
+        ac, vpred = pi.act(stochastic, ob) # action, value: int, float
         # Slight weirdness here because we need value function at time T
         # before returning segment [0, T-1] so we get the correct
         # terminal value
@@ -58,7 +58,7 @@ def traj_segment_generator(pi, env, horizon, stochastic):
 
         cur_ep_ret += rew
         cur_ep_len += 1
-        if new:
+        if new: # if done, reset game
             ep_rets.append(cur_ep_ret)
             ep_lens.append(cur_ep_len)
             cur_ep_ret = 0
@@ -68,9 +68,9 @@ def traj_segment_generator(pi, env, horizon, stochastic):
 
 def add_vtarg_and_adv(seg, gamma, lam):
     new = np.append(seg["new"], 0) # last element is only used for last vtarg, but we already zeroed it if last new = 1
-    vpred = np.append(seg["vpred"], seg["nextvpred"])
-    T = len(seg["rew"])
-    seg["adv"] = gaelam = np.empty(T, 'float32')
+    vpred = np.append(seg["vpred"], seg["nextvpred"]) # nparray of shape (513,)
+    T = len(seg["rew"]) # 512
+    seg["adv"] = gaelam = np.empty(T, 'float32') # np.ndarray of shape (512,)
     rew = seg["rew"]
     lastgaelam = 0
     for t in reversed(range(T)):
@@ -90,31 +90,31 @@ def learn(env, policy_fn, *,
         max_timesteps=0, max_episodes=0, max_iters=0,  # time constraint
         callback=None
         ):
-    nworkers = MPI.COMM_WORLD.Get_size()
-    rank = MPI.COMM_WORLD.Get_rank()
+    nworkers = MPI.COMM_WORLD.Get_size() # 1
+    rank = MPI.COMM_WORLD.Get_rank() # 0
     np.set_printoptions(precision=3)
     # Setup losses and stuff
     # ----------------------------------------
-    ob_space = env.observation_space
-    ac_space = env.action_space
-    pi = policy_fn("pi", ob_space, ac_space)
-    oldpi = policy_fn("oldpi", ob_space, ac_space)
+    ob_space = env.observation_space # (84, 84, 1)
+    ac_space = env.action_space # Discrete(4)
+    pi = policy_fn("pi", ob_space, ac_space) # CnnPolicy() class
+    oldpi = policy_fn("oldpi", ob_space, ac_space) # CnnPolicy() class
     atarg = tf.placeholder(dtype=tf.float32, shape=[None]) # Target advantage function (if applicable)
     ret = tf.placeholder(dtype=tf.float32, shape=[None]) # Empirical return
 
-    ob = U.get_placeholder_cached(name="ob")
-    ac = pi.pdtype.sample_placeholder([None])
+    ob = U.get_placeholder_cached(name="ob") # (?, 84, 84, 1)
+    ac = pi.pdtype.sample_placeholder([None]) # (?,)
 
-    kloldnew = oldpi.pd.kl(pi.pd)
+    kloldnew = oldpi.pd.kl(pi.pd) # (?,)
     ent = pi.pd.entropy()
-    meankl = tf.reduce_mean(kloldnew)
+    meankl = tf.reduce_mean(kloldnew) # float
     meanent = tf.reduce_mean(ent)
-    entbonus = entcoeff * meanent
+    entbonus = entcoeff * meanent # float
 
-    vferr = tf.reduce_mean(tf.square(pi.vpred - ret))
+    vferr = tf.reduce_mean(tf.square(pi.vpred - ret)) # ||cnn_critic - ret(placeholder)||^2
 
     ratio = tf.exp(pi.pd.logp(ac) - oldpi.pd.logp(ac)) # advantage * pnew / pold
-    surrgain = tf.reduce_mean(ratio * atarg)
+    surrgain = tf.reduce_mean(ratio * atarg) # sum(adv * pnew / pold)
 
     optimgain = surrgain + entbonus
     losses = [optimgain, meankl, entbonus, surrgain, meanent]
@@ -139,10 +139,10 @@ def learn(env, policy_fn, *,
         tangents.append(tf.reshape(flat_tangent[start:start+sz], shape))
         start += sz
     gvp = tf.add_n([tf.reduce_sum(g*tangent) for (g, tangent) in zipsame(klgrads, tangents)]) #pylint: disable=E1111
-    fvp = U.flatgrad(gvp, var_list)
+    fvp = U.flatgrad(gvp, var_list) # grad(gvp, var_list)
 
     assign_old_eq_new = U.function([],[], updates=[tf.assign(oldv, newv)
-        for (oldv, newv) in zipsame(oldpi.get_variables(), pi.get_variables())])
+        for (oldv, newv) in zipsame(oldpi.get_variables(), pi.get_variables())]) # sync cnn params
     compute_losses = U.function([ob, ac, atarg], losses)
     compute_lossandgrad = U.function([ob, ac, atarg], losses + [U.flatgrad(optimgain, var_list)])
     compute_fvp = U.function([flat_tangent, ob, ac, atarg], fvp)
@@ -166,7 +166,7 @@ def learn(env, policy_fn, *,
         return out
 
     U.initialize()
-    th_init = get_flat()
+    th_init = get_flat() # nparray of shape (169116,)
     MPI.COMM_WORLD.Bcast(th_init, root=0)
     set_from_flat(th_init)
     vfadam.sync()
@@ -196,8 +196,10 @@ def learn(env, policy_fn, *,
         logger.log("********** Iteration %i ************"%iters_so_far)
 
         with timed("sampling"):
-            seg = seg_gen.__next__()
-        add_vtarg_and_adv(seg, gamma, lam)
+            seg = seg_gen.__next__() # a trajectory of batch-size 512
+        # seg["adv"] <- gaelam
+        # seg["tdlamret"] <- seg["adv"] + seg["vpred"]
+        add_vtarg_and_adv(seg, gamma, lam) # GAE -> seg["tdlamret"]
 
         # ob, ac, atarg, ret, td1ret = map(np.concatenate, (obs, acs, atargs, rets, td1rets))
         ob, ac, atarg, tdlamret = seg["ob"], seg["ac"], seg["adv"], seg["tdlamret"]
@@ -220,7 +222,7 @@ def learn(env, policy_fn, *,
         if np.allclose(g, 0):
             logger.log("Got zero gradient. not updating")
         else:
-            with timed("cg"):
+            with timed("cg"): # conjugate gradient
                 stepdir = cg(fisher_vector_product, g, cg_iters=cg_iters, verbose=rank==0)
             assert np.isfinite(stepdir).all()
             shs = .5*stepdir.dot(fisher_vector_product(stepdir))
