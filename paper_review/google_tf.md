@@ -1,10 +1,10 @@
-# Tensorflow: Large-scale machine learning on heterogeneous distributed systems
- 2016
+# Tensorflow
 
-# TensorFlow: A System for Large-Scale Machine Learning.
- OSDI 2016
+## Papers
+- Tensorflow: Large-scale machine learning on heterogeneous distributed systems, 2016
+- TensorFlow: A System for Large-Scale Machine Learning, OSDI 2016
 
-# DAG Graph Optimization
+## DAG Graph Optimization
  Node Placement to decide device: first run a simulation; greedy selection based on completion time;
  Common subgraph elimination [8];
  Scheduling: node execution as late as possible, reduce peak memory consumption;
@@ -13,13 +13,13 @@
  Control-flow: if and while, unrolled operation for RNN
  To train large models (NLP): sparse embedding layers; Gather and Stitch; sampled softmax;
 
-# Dynamic DAG Graph Optimization
+## Dynamic DAG Graph Optimization
  Widely used in parse-trees, logical terms and molecular graphs; 
  Tensorflow Fold:
    Different graphs -> a whole graph;
    Apply while loop: each iteration compute different depth; (c) Apply gather for input and concat for output;
 
-# Data-Flow
+## Data-Flow
  Elements: Tensors, Operations, Stateful operations (Variable, queues)
  Data flow partial and concurrent execution: feed, fetch, step
  Directed, acyclic; R_op to solve for Jacobi matrix
